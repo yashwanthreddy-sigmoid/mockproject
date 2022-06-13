@@ -1,0 +1,7 @@
+tweepy
+pycountry
+kafka-python
+elasticsearch==7.11
+pandas
+flask
+python-dotenv

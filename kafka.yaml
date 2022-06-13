@@ -1,0 +1,58 @@
+version: "3.3"
+services:
+  zookeeper:
+    image: zookeeper
+    restart: always
+    container_name: zookeeper
+    hostname: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOO_MY_ID: 1
+
+  kafka:
+    image: wurstmeister/kafka
+    container_name: kafka
+    restart: always
+    depends_on:
+      - zookeeper
+    ports:
+    - "19092:19092"
+    - "9092:9092"
+    environment:
+      # References:
+      # https://gist.github.com/rmoff/fb7c39cc189fc6082a5fbd390ec92b3d
+      # https://stackoverflow.com/questions/53089486/unable-to-connect-to-kafka-run-in-container-from-spring-boot-app-run-outside-con
+      # Scenario 2 (Airflow) and Scenario 4 (locally): https://www.confluent.io/blog/kafka-client-cannot-connect-to-broker-on-aws-on-docker-etc/
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      # KAFKA_ADVERTISED_LISTENER———
+      # kafka:9092 is for exposing connections internal to the docker network (as used in logstash conf)
+      # localhost:19092 is exposing connection external to the docker network (as for the host machine in this case)
+      KAFKA_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://0.0.0.0:19092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:19092
+
+  kafka_manager:
+    image: hlebalbau/kafka-manager
+    container_name: kakfa-manager
+    restart: always
+    ports:
+      - "9000:9000"
+    depends_on:
+      - zookeeper
+    environment:
+      ZK_HOSTS: "zookeeper:2181"
+      APPLICATION_SECRET: "random-secret"
+      KAFKA_MANAGER_AUTH_ENABLED: "true" # line added
+      KAFKA_MANAGER_USERNAME: "kafka" # line added
+      KAFKA_MANAGER_PASSWORD: "kafka" # line added
+
+#  kafka:
+#    image: wurstmeister/kafka
+#    container_name: kafka
+#    ports:
+#    - 9092:9092
+#    environment:
+#      KAFKA_ADVERTISED_HOST_NAME: 192.168.0.101
+#      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
